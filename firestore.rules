@@ -1,0 +1,301 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny: All requests are denied unless explicitly allowed below.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'mnasirm2007@gmail.com' || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ROOT COLLECTIONS
+
+    match /feedback/{feedbackId} {
+      allow create: if isSignedIn() && isValidId(feedbackId) && isValidFeedback(incoming());
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      function isValidFeedback(data) {
+        return data.keys().hasAll(['id', 'userId', 'userEmail', 'message', 'timestamp'])
+          && data.keys().size() == 5
+          && data.id == feedbackId
+          && data.userId == request.auth.uid
+          && data.userEmail is string && data.userEmail.size() > 0 && data.userEmail.size() <= 200
+          && data.message is string && data.message.size() > 0 && data.message.size() <= 10000
+          && data.timestamp is string && data.timestamp.size() <= 100;
+      }
+    }
+
+    match /stores/{storeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid && isValidStore(incoming());
+      allow update: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin()) && isValidStore(incoming());
+      allow delete: if isAdmin();
+
+      function isValidStore(data) {
+        return data.keys().hasAll(['id', 'ownerId', 'name', 'location'])
+          && data.id == storeId
+          && data.ownerId is string
+          && data.name is string && data.name.size() > 0
+          && data.location is string && data.location.size() > 0;
+      }
+    }
+
+    match /supplyOrders/{orderId} {
+      allow read: if isSignedIn() && (
+        resource.data.supplierId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/stores/$(resource.data.storeId)) && get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && exists(/databases/$(database)/documents/stores/$(incoming().storeId)) && get(/databases/$(database)/documents/stores/$(incoming().storeId)).data.ownerId == request.auth.uid && isValidSupplyOrder(incoming());
+      allow update: if isSignedIn() && (
+        resource.data.supplierId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/stores/$(existing().storeId)) && get(/databases/$(database)/documents/stores/$(existing().storeId)).data.ownerId == request.auth.uid)
+      ) && isValidSupplyOrder(incoming());
+
+      function isValidSupplyOrder(data) {
+        return data.keys().hasAll(['id', 'storeId', 'supplierId', 'status', 'items'])
+          && data.id == orderId
+          && (data.status == 'pending' || data.status == 'processing' || data.status == 'shipped' || data.status == 'completed')
+          && (!('parentSaleId' in data) || data.parentSaleId == null || data.parentSaleId is string);
+      }
+    }
+
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // USER SETTINGS & SUB-COLLECTIONS
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && (resource.data.role == 'supplier' || resource.data.role == 'owner');
+      allow create: if isOwner(userId) && isValidSettings(incoming());
+      allow update: if isOwner(userId) && isValidSettings(incoming()) 
+        && incoming().diff(existing()).affectedKeys().hasOnly(['currency', 'shopName', 'shopPhone', 'shopAddress', 'language', 'theme', 'brightness', 'role', 'roleConfirmed', 'roleChangeHistory', 'storeId', 'enableVoiceInput', 'pinCode']);
+
+      function isValidSettings(data) {
+        return data.keys().hasAll(['currency', 'shopName', 'language', 'theme', 'brightness']) 
+          && data.currency is string && data.currency.size() <= 10
+          && data.shopName is string && data.shopName.size() <= 100
+          && data.language is string && data.language.size() <= 10
+          && (data.theme == 'dark' || data.theme == 'light')
+          && data.brightness is number && data.brightness >= 0 && data.brightness <= 200
+          && (!('shopPhone' in data) || data.shopPhone == null || (data.shopPhone is string && data.shopPhone.size() <= 40))
+          && (!('shopAddress' in data) || data.shopAddress == null || (data.shopAddress is string && data.shopAddress.size() <= 500))
+          && (!('role' in data) || data.role == null || (data.role is string && (data.role == 'owner' || data.role == 'customer' || data.role == 'supplier')))
+          && (!('roleConfirmed' in data) || data.roleConfirmed == null || data.roleConfirmed is bool)
+          && (!('roleChangeHistory' in data) || data.roleChangeHistory == null || data.roleChangeHistory is list)
+          && (!('storeId' in data) || data.storeId == null || data.storeId is string)
+          && (!('pinCode' in data) || data.pinCode == null || (data.pinCode is string && data.pinCode.size() == 4))
+          && (!('enableVoiceInput' in data) || data.enableVoiceInput == null || data.enableVoiceInput is bool);
+      }
+
+      // Inventory Items
+      match /items/{itemId} {
+        allow read: if isSignedIn();
+        allow create: if isOwner(userId) && isValidId(itemId) && isValidItem(incoming());
+        allow update: if isOwner(userId) && isValidItem(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['id', 'name', 'category', 'stock', 'costPrice', 'sellPrice', 'soldCount', 'unit', 'history', 'isWeightBased', 'sackCount', 'capacityPerSack', 'sackUnit', 'saleUnit', 'pricePerSack', 'isFixedRatio', 'allowBothModes', 'description', 'barcode']);
+        allow delete: if isOwner(userId);
+ 
+        function isValidItem(data) {
+          return data.keys().hasAll(['id', 'name', 'category', 'stock', 'costPrice', 'sellPrice', 'soldCount', 'unit'])
+            && data.id == itemId
+            && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+            && data.category is string
+            && data.stock is number
+            && data.costPrice is number
+            && data.sellPrice is number
+            && data.soldCount is number
+            && data.unit is string
+            && (!('isWeightBased' in data) || data.isWeightBased == null || data.isWeightBased is bool)
+            && (!('sackCount' in data) || data.sackCount == null || data.sackCount is number)
+            && (!('capacityPerSack' in data) || data.capacityPerSack == null || data.capacityPerSack is number)
+            && (!('sackUnit' in data) || data.sackUnit == null || data.sackUnit is string)
+            && (!('saleUnit' in data) || data.saleUnit == null || data.saleUnit is string)
+            && (!('pricePerSack' in data) || data.pricePerSack == null || data.pricePerSack is number)
+            && (!('isFixedRatio' in data) || data.isFixedRatio == null || data.isFixedRatio is bool)
+            && (!('allowBothModes' in data) || data.allowBothModes == null || data.allowBothModes is bool)
+            && (!('description' in data) || data.description == null || data.description is string)
+            && (!('barcode' in data) || data.barcode == null || data.barcode is string)
+            && (!('history' in data) || data.history == null || data.history is list);
+        }
+      }
+
+      // Sales
+      match /sales/{saleId} {
+        allow list, get: if isOwner(userId) || (isSignedIn() && resource.data.customerId == request.auth.uid);
+        allow create: if isSignedIn() && (isOwner(userId) || incoming().customerId == request.auth.uid) && isValidId(saleId) && isValidSale(incoming());
+        allow update: if isOwner(userId) && isValidSale(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['id', 'itemId', 'itemName', 'customerId', 'customerName', 'customerPhone', 'quantity', 'totalPrice', 'profit', 'paymentMethod', 'date', 'invoiceId', 'status', 'supplyStatus']);
+        allow delete: if isOwner(userId);
+
+        function isValidSale(data) {
+          return data.keys().hasAll(['id', 'itemId', 'itemName', 'unit', 'quantity', 'totalPrice', 'profit', 'paymentMethod', 'date'])
+            && data.id == saleId
+            && data.itemId is string
+            && data.itemName is string
+            && data.unit is string
+            && data.quantity is number
+            && data.totalPrice is number
+            && data.profit is number
+            && data.paymentMethod is string
+            && data.date is string
+            && (!('customerId' in data) || data.customerId == null || data.customerId is string)
+            && (!('customerName' in data) || data.customerName == null || data.customerName is string)
+            && (!('customerPhone' in data) || data.customerPhone == null || data.customerPhone is string)
+            && (!('invoiceId' in data) || data.invoiceId == null || data.invoiceId is string)
+            && (!('status' in data) || data.status == null || data.status in ['pending', 'processing', 'ready', 'delivered', 'cancelled'])
+            && (!('supplyStatus' in data) || data.supplyStatus == null || data.supplyStatus in ['none', 'ordered', 'shipped', 'arrived']);
+        }
+      }
+
+      // Partners
+      match /partners/{partnerId} {
+        allow create: if isOwner(userId) && isValidId(partnerId) && isValidPartner(incoming());
+        allow update: if isOwner(userId) && isValidPartner(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['id', 'name', 'totalGiven', 'totalReturned', 'history']);
+        allow delete: if isOwner(userId);
+
+        function isValidPartner(data) {
+          return data.keys().hasAll(['id', 'name', 'totalGiven', 'totalReturned'])
+            && data.id == partnerId
+            && data.name is string && data.name.size() > 0
+            && data.totalGiven is number
+            && data.totalReturned is number
+            && (!('history' in data) || data.history == null || data.history is list);
+        }
+      }
+
+      // Invoices
+      match /invoices/{invoiceId} {
+        allow create: if isOwner(userId) && isValidId(invoiceId) && isValidInvoice(incoming());
+        allow update: if isOwner(userId) && isValidInvoice(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['id', 'customerName', 'customerPhone', 'items', 'totalAmount', 'paymentMethod', 'date']);
+        allow delete: if isOwner(userId);
+
+        function isValidInvoice(data) {
+          return data.keys().hasAll(['id', 'customerName', 'items', 'totalAmount', 'paymentMethod', 'date'])
+            && data.id == invoiceId
+            && data.customerName is string
+            && data.items is list
+            && data.totalAmount is number
+            && data.paymentMethod is string
+            && data.date is string
+            && (!('customerPhone' in data) || data.customerPhone == null || data.customerPhone is string);
+        }
+      }
+
+      // Blessings
+      match /blessings/{blessingId} {
+        allow create: if isOwner(userId) && isValidId(blessingId) && isValidBlessing(incoming());
+        allow delete: if isOwner(userId);
+
+        function isValidBlessing(data) {
+          return data.keys().hasAll(['id', 'text', 'offering', 'date'])
+            && data.id == blessingId
+            && data.text is string
+            && data.offering is string
+            && data.date is string;
+        }
+      }
+
+      // Salaries
+      match /salaries/{salaryId} {
+        allow create: if isOwner(userId) && isValidId(salaryId) && isValidSalary(incoming());
+        allow update: if isOwner(userId) && isValidSalary(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['id', 'amount', 'date', 'notes']);
+        allow delete: if isOwner(userId);
+
+        function isValidSalary(data) {
+          return data.keys().hasAll(['id', 'amount', 'date'])
+            && data.id == salaryId
+            && data.amount is number
+            && data.date is string
+            && (!('notes' in data) || data.notes == null || data.notes is string);
+        }
+      }
+
+      // Customer Credits (Udhaar)
+      match /credits/{creditId} {
+        allow create: if isOwner(userId) && isValidId(creditId) && isValidCredit(incoming());
+        allow update: if isOwner(userId) && isValidCredit(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['id', 'customerName', 'customerPhone', 'totalDebt', 'totalPaid', 'history', 'lastUpdated']);
+        allow delete: if isOwner(userId);
+
+        function isValidCredit(data) {
+          return data.keys().hasAll(['id', 'customerName', 'totalDebt', 'totalPaid', 'history', 'lastUpdated'])
+            && data.id == creditId
+            && data.customerName is string && data.customerName.size() > 0
+            && data.totalDebt is number
+            && data.totalPaid is number
+            && data.history is list
+            && data.lastUpdated is string
+            && (!('customerPhone' in data) || data.customerPhone == null || data.customerPhone is string);
+        }
+      }
+
+      // Database Backup Snapshots (Disaster Recovery)
+      match /backups/{backupId} {
+        allow create: if isOwner(userId) && isValidId(backupId) && isValidBackupSnapshot(incoming());
+        allow read, delete: if isOwner(userId) && isValidId(backupId);
+
+        function isValidBackupSnapshot(data) {
+          return data.keys().hasAll(['id', 'timestamp', 'items', 'sales', 'partners', 'itemsCount', 'salesCount', 'partnersCount'])
+            && data.id == backupId
+            && data.timestamp is string
+            && data.items is list
+            && data.sales is list
+            && data.partners is list
+            && data.itemsCount is number
+            && data.salesCount is number
+            && data.partnersCount is number;
+        }
+      }
+
+      // Trusted Devices for Multi-Factor Identity Management
+      match /devices/{deviceId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(deviceId) && isValidDevice(incoming());
+        allow delete: if isOwner(userId);
+
+        function isValidDevice(data) {
+          return data.keys().hasAll(['id', 'name', 'platform', 'lastActive', 'authorized'])
+            && data.id == deviceId
+            && data.name is string && data.name.size() > 0
+            && data.platform is string && data.platform.size() > 0
+            && data.lastActive is string && data.lastActive.size() > 0
+            && data.authorized is bool;
+        }
+      }
+
+      match /{allSubcollections=**} {
+        allow list, get: if isOwner(userId);
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Last: Sunset Grocery \u0026 Blessings",
+  "description": "A comprehensive grocery store management app with inventory tracking, sales analytics, partner management, and daily spiritual offerings.",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": [
+    "inventory_management",
+    "sales_tracking",
+    "partner_ledger",
+    "daily_affirmations",
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

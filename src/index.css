@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+}
+
+body {
+  @apply transition-colors duration-500;
+  background-color: #0a0502;
+}
+
+/* ==========================================================================
+   POLISHED LIGHT MODE OVERRIDES (HIGH CONTRAST, GORGEOUS AESTHETIC)
+   ========================================================================= */
+html.light body {
+  background-color: #fdfaf7 !important; /* Elegant soft light cream */
+  color: #0f172a !important;
+}
+
+html.light {
+  /* Safely convert white-text colors to dark slate on a light background without breaking white text inside dark buttons/components */
+  .text-white:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *) {
+    color: #0f172a !important; /* Slate 900 */
+  }
+
+  /* Handle dynamic translucent text containing white/ prefix */
+  [class*="text-white/9"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *),
+  [class*="text-white/8"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *) {
+    color: #1e293b !important; /* Slate 800 */
+  }
+
+  [class*="text-white/7"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *),
+  [class*="text-white/6"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *),
+  [class*="text-white/5"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *) {
+    color: #334155 !important; /* Slate 700 */
+  }
+
+  [class*="text-white/4"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *),
+  [class*="text-white/3"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *),
+  [class*="text-white/2"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *),
+  [class*="text-white/1"]:not(button):not(button *):not(nav *):not(.bg-slate-900 *):not(.bg-black *):not(.bg-neutral-900 *):not(.bg-zinc-900 *) {
+    color: #64748b !important; /* Slate 500 */
+  }
+
+  /* Secure icons and other visual accents inside buttons remain visible and styled appropriately */
+  .text-white\/40 svg,
+  .text-white\/20 svg,
+  .text-white\/60 svg,
+  .text-white\/30 svg {
+    color: inherit;
+  }
+
+  /* Convert transparent dark containers into premium solid/translucent light cards */
+  .bg-white\/2,
+  .bg-white\/5,
+  .bg-white\/10,
+  .bg-white\/20,
+  .bg-black\/20,
+  .bg-black\/40,
+  .bg-black\/80,
+  .bg-[#1a0b00],
+  .bg-[#110700],
+  .bg-[#0a0502],
+  .bg-zinc-950\/20,
+  .bg-orange-500\/5,
+  .bg-orange-500\/10 {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+  }
+
+  /* Specific dense widget panels background */
+  div.bg-[#0a0a0a],
+  div.bg-zinc-950,
+  div.bg-black,
+  div.bg-zinc-900,
+  div.bg-stone-900,
+  div.bg-neutral-900 {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+  }
+
+  /* Premium border overrides for maximum separation */
+  .border-white\/5,
+  .border-white\/10,
+  .border-white\/20,
+  .border-white\/30,
+  .border-orange-500\/30 {
+    border-color: rgba(15, 23, 42, 0.12) !important;
+  }
+
+  /* Ensure form inputs have crisp dark typography and high-contrast borders */
+  input, select, textarea, option {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: rgba(15, 23, 42, 0.18) !important;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #94a3b8 !important; /* slate-400 */
+  }
+
+  /* Blur overlays of settings and modal views */
+  .backdrop-blur-xl, .backdrop-blur-md, .backdrop-blur-2xl, .backdrop-blur-3xl {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+  }
+
+  /* Header sub-labels */
+  .text-white\/40.font-black, .text-white\/30.font-black {
+    color: #475569 !important; /* Slate 600 style */
+  }
+
+  /* Persistent floating navigation bar adjustments */
+  nav.bg-black\/80 {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border-color: rgba(15, 23, 42, 0.15) !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  nav.bg-black\/80 a {
+    color: #475569 !important;
+  }
+
+  nav.bg-black\/80 a:hover {
+    color: #0d1527 !important;
+    background-color: rgba(15, 23, 42, 0.05) !important;
+  }
+
+  nav.bg-black\/80 a.bg-white\/10,
+  nav.bg-black\/80 a.bg-white\/20 {
+    background-color: rgba(15, 23, 42, 0.08) !important;
+    color: #0f172a !important;
+  }
+
+  /* Table head styles contrast */
+  th {
+    color: #475569 !important;
+  }
+
+  /* Dropdown selections items list */
+  option {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+}
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+  
+  /* Mobile "Zoom" optimization */
+  @media (max-width: 640px) {
+    body {
+      font-size: 16px; /* Native feel */
+    }
+    
+    input, select, textarea {
+      font-size: 16px !important; /* Prevent auto-zoom on iOS */
+    }
+  }
+}
+

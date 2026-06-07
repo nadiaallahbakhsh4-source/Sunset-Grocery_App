@@ -1,0 +1,277 @@
+{
+  "entities": {
+    "Item": {
+      "title": "Inventory Item",
+      "description": "A product in the shop's inventory.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "stock": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "sellPrice": { "type": "number" },
+        "soldCount": { "type": "number" },
+        "unit": { "type": "string" },
+        "isWeightBased": { "type": "boolean" },
+        "sackCount": { "type": "number" },
+        "capacityPerSack": { "type": "number" },
+        "sackUnit": { "type": "string" },
+        "saleUnit": { "type": "string" },
+        "pricePerSack": { "type": "number" },
+        "isFixedRatio": { "type": "boolean" },
+        "allowBothModes": { "type": "boolean" },
+        "barcode": { "type": "string" },
+        "description": { "type": "string" },
+        "history": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "required": ["id", "name", "category", "stock", "costPrice", "sellPrice", "soldCount", "unit"]
+    },
+    "Sale": {
+      "title": "Sale Record",
+      "description": "A record of a single item sale.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "quantity": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "profit": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "date": { "type": "string" },
+        "invoiceId": { "type": "string" }
+      },
+      "required": ["id", "itemId", "itemName", "quantity", "totalPrice", "profit", "paymentMethod", "date"]
+    },
+    "Partner": {
+      "title": "Business Partner",
+      "description": "A partner who borrows or lends money/goods.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "totalGiven": { "type": "number" },
+        "totalReturned": { "type": "number" },
+        "history": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "required": ["id", "name", "totalGiven", "totalReturned"]
+    },
+    "Invoice": {
+      "title": "Sales Invoice",
+      "description": "A collective invoice for multiple items.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "totalAmount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "customerName", "items", "totalAmount", "paymentMethod", "date"]
+    },
+    "DailyBlessing": {
+      "title": "Daily Blessing",
+      "description": "An AI-generated spiritual offering.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "offering": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "text", "offering", "date"]
+    },
+    "DailySalary": {
+      "title": "Daily Salary",
+      "description": "A record of an owner's daily salary or drawings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "amount", "date"]
+    },
+    "CustomerCredit": {
+      "title": "Customer Credit",
+      "description": "Udhaar tracking for customers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "totalDebt": { "type": "number" },
+        "totalPaid": { "type": "number" },
+        "history": { "type": "array", "items": { "type": "object" } },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["id", "customerName", "totalDebt", "totalPaid", "lastUpdated"]
+    },
+    "Settings": {
+      "title": "App Settings",
+      "description": "User preferences and shop settings.",
+      "type": "object",
+      "properties": {
+        "currency": { "type": "string" },
+        "shopName": { "type": "string" },
+        "shopPhone": { "type": "string" },
+        "shopAddress": { "type": "string" },
+        "language": { "type": "string" },
+        "theme": { "type": "string" },
+        "brightness": { "type": "number" },
+        "role": { "type": "string" },
+        "roleConfirmed": { "type": "boolean" },
+        "roleChangeHistory": { "type": "array", "items": { "$ref": "#/entities/RoleChangeRequest" } },
+        "enableVoiceInput": { "type": "boolean" },
+        "pinCode": { "type": "string" }
+      },
+      "required": ["currency", "shopName", "language", "theme", "brightness"]
+    },
+    "RoleChangeRequest": {
+      "title": "Role Change Request",
+      "description": "A record of requested role change with reason.",
+      "type": "object",
+      "properties": {
+        "oldRole": { "type": "string" },
+        "newRole": { "type": "string" },
+        "reason": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["oldRole", "reason", "timestamp"]
+    },
+    "Store": {
+      "title": "Store",
+      "description": "Information about a specific store owned by a Shop Owner.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "ownerId", "name", "location"]
+    },
+    "SupplyOrder": {
+      "title": "Supply Order",
+      "description": "Stock request from owner to supplier.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "storeId": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "processing", "shipped", "completed"] },
+        "totalCost": { "type": "number" },
+        "date": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "notes": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "itemId": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unit": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["id", "storeId", "supplierId", "status", "items"]
+    },
+    "BackupSnapshot": {
+      "title": "Backup Snapshot",
+      "description": "A snapshot backup of items, sales, and partners collections.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "sales": { "type": "array", "items": { "type": "object" } },
+        "partners": { "type": "array", "items": { "type": "object" } },
+        "itemsCount": { "type": "number" },
+        "salesCount": { "type": "number" },
+        "partnersCount": { "type": "number" }
+      },
+      "required": ["id", "timestamp", "items", "sales", "partners", "itemsCount", "salesCount", "partnersCount"]
+    },
+    "TrustedDevice": {
+      "title": "Trusted Device",
+      "description": "Information about a trusted device authorized to access the user account.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "platform": { "type": "string" },
+        "lastActive": { "type": "string" },
+        "authorized": { "type": "boolean" }
+      },
+      "required": ["id", "name", "platform", "lastActive", "authorized"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/devices/{deviceId}": {
+      "schema": "TrustedDevice",
+      "description": "Authorized or revoked trusted devices for Multi-Factor Verification."
+    },
+    "/stores/{storeId}": {
+      "schema": "#/entities/Store",
+      "description": "Global list of all stores."
+    },
+    "/supplyOrders/{orderId}": {
+      "schema": "#/entities/SupplyOrder",
+      "description": "Orders between owners and suppliers."
+    },
+    "/users/{userId}": {
+      "schema": "Settings",
+      "description": "User specific settings."
+    },
+    "/users/{userId}/items/{itemId}": {
+      "schema": "Item",
+      "description": "Inventory items for a specific user."
+    },
+    "/users/{userId}/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Sales records for a specific user."
+    },
+    "/users/{userId}/partners/{partnerId}": {
+      "schema": "Partner",
+      "description": "Business partners for a specific user."
+    },
+    "/users/{userId}/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Invoices for a specific user."
+    },
+    "/users/{userId}/blessings/{blessingId}": {
+      "schema": "DailyBlessing",
+      "description": "Daily blessings for a specific user."
+    },
+    "/users/{userId}/salaries/{salaryId}": {
+      "schema": "DailySalary",
+      "description": "Daily salary records for an owner."
+    },
+    "/users/{userId}/credits/{creditId}": {
+      "schema": "CustomerCredit",
+      "description": "Credit records for customers."
+    },
+    "/users/{userId}/backups/{backupId}": {
+      "schema": "BackupSnapshot",
+      "description": "Disaster recovery database backups."
+    }
+  }
+}
