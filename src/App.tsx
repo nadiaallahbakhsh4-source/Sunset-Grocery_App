@@ -24,7 +24,7 @@ import { useFirebase } from './components/FirebaseProvider';
 import { syncData, syncDoc, migrateFromLocalStorage, updateSettings, syncGlobalCollection, saveData } from './lib/dataService';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from './lib/translations';
-import { db, auth } from './lib/firebase';
+import { db, auth, isFirebaseConfigured } from './lib/firebase';
 import { doc, getDocFromServer } from 'firebase/firestore';
 
 const DEFAULT_SETTINGS: Settings = {
@@ -804,7 +804,7 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0a0502] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0a0502] flex flex-col items-center justify-center p-4 gap-6">
         <AnimatePresence>
           {!isOnline && (
             <motion.div 
@@ -820,6 +820,41 @@ export default function App() {
           )}
         </AnimatePresence>
         <SunsetBackdrop isLight={false} />
+
+        {!isFirebaseConfigured && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md bg-amber-500/10 border border-amber-500/20 backdrop-blur-xl p-5 rounded-[24px] space-y-3 z-10"
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-xl">⚠️</span>
+              <div className="space-y-1">
+                <h3 className="text-sm font-sans text-amber-400 font-bold tracking-tight">Firebase API Key Required</h3>
+                <p className="text-[11px] text-white/70 leading-relaxed">
+                  Your Firebase API Key has been safely stripped from the codebase for security. 
+                  To connect your own and log in, configure it locally or in AI Studio:
+                </p>
+              </div>
+            </div>
+            <div className="bg-black/30 rounded-xl p-3.5 text-[10px] font-mono text-white/80 space-y-3 leading-relaxed">
+              <div>
+                <b className="text-orange-400 font-sans uppercase tracking-widest text-[9px] block mb-1">Option 1: Add Locally (.env file)</b>
+                In your project root, open your <code className="text-amber-300">.env</code> file and assign your key:
+                <pre className="bg-black/50 p-1.5 rounded mt-1 overflow-x-auto text-[9px] text-amber-200 select-all">VITE_FIREBASE_API_KEY="AIzaSy..."</pre>
+              </div>
+              <div className="border-t border-white/5 pt-2">
+                <b className="text-orange-400 font-sans uppercase tracking-widest text-[9px] block mb-1">Option 2: Settings Env Variables</b>
+                Under AI Studio Cloud Run setup or global settings gear, add:
+                <div className="mt-1 flex flex-col gap-1">
+                  <div>• Name: <code className="text-amber-300 select-all">VITE_FIREBASE_API_KEY</code></div>
+                  <div>• Value: <code className="text-amber-300">[your-actual-api-key]</code></div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1012,6 +1047,17 @@ export default function App() {
             <div className="flex items-center gap-2 text-white text-xs font-bold uppercase tracking-widest">
               <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
               Network Disconnected - Shop Operating in Offline Mode
+            </div>
+          </motion.div>
+        )}
+        {!isFirebaseConfigured && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="fixed top-0 left-0 right-0 z-[101] bg-amber-600 px-4 py-2 flex items-center justify-center gap-2"
+          >
+            <div className="flex items-center gap-2 text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest text-center">
+              ⚠️ Firebase Key Missing. Configure <code className="bg-black/20 px-1.5 py-0.5 rounded text-amber-200">VITE_FIREBASE_API_KEY</code> to enable full remote synchronization.
             </div>
           </motion.div>
         )}

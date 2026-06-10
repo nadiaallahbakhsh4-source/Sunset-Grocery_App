@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db, isFirebaseConfigured } from './firebase';
 import { 
   collection, 
   doc, 
@@ -14,12 +14,48 @@ import {
 import { handleFirestoreError, OperationType } from './firestoreUtils';
 import { Item, Sale, Partner, DailyBlessing, Invoice, Settings, Store, SupplyOrder } from '../types';
 
+// Local in-memory listeners to trigger callbacks when localStorage data changes
+const localListeners = new Map<string, Set<(data: any[]) => void>>();
+const docListeners = new Map<string, Set<(data: any) => void>>();
+
+export const notifyLocalListeners = (collectionName: string) => {
+  const listeners = localListeners.get(collectionName);
+  if (listeners) {
+    const key = `local_sunset_${collectionName}`;
+    const data = JSON.parse(localStorage.getItem(key) || '[]');
+    listeners.forEach(cb => cb(data));
+  }
+};
+
+export const notifyDocListener = (path: string) => {
+  const listeners = docListeners.get(path);
+  if (listeners) {
+    const data = JSON.parse(localStorage.getItem(`local_sunset_doc_${path}`) || 'null');
+    listeners.forEach(cb => cb(data));
+  }
+};
+
 export const syncData = (
   userId: string,
   collectionName: string,
   callback: (data: any[]) => void,
   targetUserId?: string
 ) => {
+  if (!isFirebaseConfigured) {
+    if (!localListeners.has(collectionName)) {
+      localListeners.set(collectionName, new Set());
+    }
+    localListeners.get(collectionName)!.add(callback);
+
+    const key = `local_sunset_${collectionName}`;
+    const data = JSON.parse(localStorage.getItem(key) || '[]');
+    callback(data);
+
+    return () => {
+      localListeners.get(collectionName)?.delete(callback);
+    };
+  }
+
   const path = `users/${targetUserId || userId}/${collectionName}`;
   const baseCol = collection(db, path);
   const q = (targetUserId && targetUserId !== userId && collectionName === 'sales')
@@ -45,6 +81,24 @@ export const syncGlobalCollection = (
   callback: (data: any[]) => void,
   filter?: { field: string, value: any }
 ) => {
+  if (!isFirebaseConfigured) {
+    if (!localListeners.has(collectionName)) {
+      localListeners.set(collectionName, new Set());
+    }
+    localListeners.get(collectionName)!.add(callback);
+
+    const key = `local_sunset_${collectionName}`;
+    let data = JSON.parse(localStorage.getItem(key) || '[]');
+    if (filter) {
+      data = data.filter((item: any) => item[filter.field] === filter.value);
+    }
+    callback(data);
+
+    return () => {
+      localListeners.get(collectionName)?.delete(callback);
+    };
+  }
+
   const colRef = collection(db, collectionName);
   const q = filter 
     ? query(colRef, where(filter.field, '==', filter.value))
@@ -64,6 +118,20 @@ export const syncGlobalCollection = (
 };
 
 export const saveGlobalDoc = async (collectionName: string, item: any) => {
+  if (!isFirebaseConfigured) {
+    const key = `local_sunset_${collectionName}`;
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    const index = existing.findIndex((i: any) => i.id === item.id);
+    if (index >= 0) {
+      existing[index] = item;
+    } else {
+      existing.push(item);
+    }
+    localStorage.setItem(key, JSON.stringify(existing));
+    notifyLocalListeners(collectionName);
+    return;
+  }
+
   const path = `${collectionName}/${item.id}`;
   try {
     await setDoc(doc(db, path), item);
@@ -73,6 +141,23 @@ export const saveGlobalDoc = async (collectionName: string, item: any) => {
 };
 
 export const fetchUsersByRole = async (role: string) => {
+  if (!isFirebaseConfigured) {
+    const accounts = JSON.parse(localStorage.getItem('local_sunset_accounts') || '[]');
+    const mapped = accounts.map((a: any) => {
+      const settingsKey = `local_sunset_doc_users/${a.uid}`;
+      const savedDoc = JSON.parse(localStorage.getItem(settingsKey) || '{}');
+      return {
+        id: a.uid,
+        uid: a.uid,
+        email: a.email,
+        displayName: a.name,
+        role: savedDoc.role || 'customer',
+        ...savedDoc
+      };
+    });
+    return mapped.filter((m: any) => m.role === role);
+  }
+
   const q = query(collection(db, 'users'), where('role', '==', role));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ ...doc.data() as any, id: doc.id }));
@@ -82,6 +167,20 @@ export const syncDoc = (
   path: string,
   callback: (data: any) => void
 ) => {
+  if (!isFirebaseConfigured) {
+    if (!docListeners.has(path)) {
+      docListeners.set(path, new Set());
+    }
+    docListeners.get(path)!.add(callback);
+
+    const data = JSON.parse(localStorage.getItem(`local_sunset_doc_${path}`) || 'null');
+    callback(data);
+
+    return () => {
+      docListeners.get(path)?.delete(callback);
+    };
+  }
+
   return onSnapshot(doc(db, path), (snapshot) => {
     callback(snapshot.data());
   }, (error) => {
@@ -90,6 +189,20 @@ export const syncDoc = (
 };
 
 export const saveData = async (userId: string, collectionName: string, item: any) => {
+  if (!isFirebaseConfigured) {
+    const key = `local_sunset_${collectionName}`;
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    const index = existing.findIndex((i: any) => i.id === item.id);
+    if (index >= 0) {
+      existing[index] = item;
+    } else {
+      existing.push(item);
+    }
+    localStorage.setItem(key, JSON.stringify(existing));
+    notifyLocalListeners(collectionName);
+    return;
+  }
+
   const path = `users/${userId}/${collectionName}/${item.id}`;
   try {
     await setDoc(doc(db, path), item);
@@ -99,6 +212,15 @@ export const saveData = async (userId: string, collectionName: string, item: any
 };
 
 export const deleteData = async (userId: string, collectionName: string, id: string) => {
+  if (!isFirebaseConfigured) {
+    const key = `local_sunset_${collectionName}`;
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    const filtered = existing.filter((i: any) => i.id !== id);
+    localStorage.setItem(key, JSON.stringify(filtered));
+    notifyLocalListeners(collectionName);
+    return;
+  }
+
   const path = `users/${userId}/${collectionName}/${id}`;
   try {
     await deleteDoc(doc(db, path));
@@ -108,6 +230,15 @@ export const deleteData = async (userId: string, collectionName: string, id: str
 };
 
 export const clearShopRecords = async (userId: string) => {
+  if (!isFirebaseConfigured) {
+    const collections = ['items', 'sales', 'partners', 'credits', 'blessings', 'invoices', 'salaries'];
+    collections.forEach(colName => {
+      localStorage.removeItem(`local_sunset_${colName}`);
+      notifyLocalListeners(colName);
+    });
+    return;
+  }
+
   const collections = ['items', 'sales', 'partners', 'credits', 'blessings', 'invoices', 'salaries'];
   let batch = writeBatch(db);
   let operationCount = 0;
@@ -142,6 +273,12 @@ export const clearShopRecords = async (userId: string) => {
 
 export const updateSettings = async (userId: string, settings: Settings) => {
   const path = `users/${userId}`;
+  if (!isFirebaseConfigured) {
+    localStorage.setItem(`local_sunset_doc_${path}`, JSON.stringify(settings));
+    notifyDocListener(path);
+    return;
+  }
+
   try {
     await setDoc(doc(db, path), settings);
   } catch (error) {
