@@ -5,6 +5,11 @@ FROM node:22-alpine AS build-stage
 
 WORKDIR /app
 
+# ---- ADD THESE TWO LINES HERE ----
+ARG VITE_GEMINI_API_KEY
+ENV VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY
+# ----------------------------------
+
 # Copy dependency files first to speed up subsequent builds
 COPY package*.json ./
 
