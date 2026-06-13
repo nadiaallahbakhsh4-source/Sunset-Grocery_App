@@ -1,0 +1,12 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/sunset-groceryapp:latest'
+      - '--build-arg'
+      - 'VITE_GEMINI_API_KEY=$_MY_SECRET_KEY'
+      - '.'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/sunset-groceryapp:latest'
