@@ -332,7 +332,11 @@ export async function predictCategory(productName: string, categories: string[])
       },
     });
 
-    const result = response.text.trim().split('\n')[0].replace(/[".]/g, '');
+    // FIX: Safely check if response.text exists
+    const text = response.text;
+    if (!text) throw new Error("Empty response from Gemini Category Prediction API");
+
+    const result = text.trim().split('\n')[0].replace(/[".]/g, '');
     
     // Validate result is in our category list
     if (categories.includes(result)) return result;
